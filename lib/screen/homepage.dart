@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:random_string/random_string.dart';
 import 'package:tododo/db_service/database.dart';
+import 'package:tododo/db_service/sqllite.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,7 +27,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    DatabaseSqlService().initializeDatabase();
     getOnTheLoad();
+    DatabaseSqlService().printTableContent('PersonalTask');
   }
 
 //long press
@@ -50,6 +53,10 @@ class _HomePageState extends State<HomePage> {
                   onTap: () async {
                     await DatabaseService()
                         .removeMethod(docSnap["id"], "PersonalTask");
+                    //sql
+                    await DatabaseSqlService()
+                        .removeMethod(docSnap["id"], "PersonalTask");
+                    // ignore: use_build_context_synchronously
                     Navigator.pop(context);
                     setState(() {});
                   },
@@ -59,6 +66,7 @@ class _HomePageState extends State<HomePage> {
           )
         : null;
   }
+//
 
 //edit sheet
   Future openEditBox(DocumentSnapshot docSnap) {
@@ -109,7 +117,12 @@ class _HomePageState extends State<HomePage> {
                     String updatedTask = todoController.text;
                     await DatabaseService()
                         .updateTask(docSnap["id"], updatedTask);
+                    //sql
+                    await DatabaseSqlService()
+                        .updateTask(docSnap["id"], updatedTask, "PersonalTask");
+
                     todoController.text = "";
+                    // ignore: use_build_context_synchronously
                     Navigator.pop(context);
                   },
                   child: Text(
@@ -165,13 +178,16 @@ class _HomePageState extends State<HomePage> {
                                   Map<String, dynamic> doneTask = {
                                     "work": docSnap["work"],
                                     "id": docSnap["id"],
-                                    "done": true,
+                                    "done": docSnap["done"],
                                   };
                                   await DatabaseService()
                                       .addToDoneTask(doneTask, docSnap["id"]);
 
                                   Future.delayed(Duration(seconds: 1), () {
                                     DatabaseService().removeMethod(
+                                        docSnap["id"], "PersonalTask");
+                                    //sql
+                                    DatabaseSqlService().removeMethod(
                                         docSnap["id"], "PersonalTask");
                                   });
                                   setState(() {});
@@ -216,6 +232,9 @@ class _HomePageState extends State<HomePage> {
                                 Future.delayed(Duration(seconds: 1), () {
                                   DatabaseService().removeMethod(
                                       docSnap["id"], "PersonalTask");
+                                  //sql
+                                  DatabaseSqlService().removeMethod(
+                                      docSnap["id"], "PersonalTask");
                                 });
                                 setState(() {});
                               },
@@ -255,7 +274,14 @@ class _HomePageState extends State<HomePage> {
             )
           : null,
       appBar: AppBar(
-        title: Text("Task Manager"),
+        title: Text(
+          "Task Manager",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         centerTitle: true,
         backgroundColor: Colors.green,
       ),
@@ -288,11 +314,17 @@ class _HomePageState extends State<HomePage> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.list),
+            icon: Icon(
+              Icons.list,
+              size: 30,
+            ),
             label: 'To do',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle),
+            icon: Icon(
+              Icons.check_circle,
+              size: 30,
+            ),
             label: 'Done',
           ),
         ],
@@ -345,14 +377,23 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: Colors.green,
                     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     String id = randomAlphaNumeric(100);
                     Map<String, dynamic> userTodo = {
                       "work": todoController.text,
                       "id": id,
                       "done": false,
                     };
-                    DatabaseService().addPersonalTask(userTodo, id);
+                    Map<String, dynamic> userSqlTodo = {
+                      "work": todoController.text,
+                      "id": id,
+                      "done": 0,
+                    };
+                    await DatabaseService().addPersonalTask(userTodo, id);
+                    //sql
+                    await DatabaseSqlService()
+                        .addTaskSQLite(userSqlTodo, "PersonalTask");
+
                     todoController.text = "";
                     Navigator.pop(context);
                   },
